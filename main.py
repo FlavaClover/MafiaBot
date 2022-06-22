@@ -10,6 +10,7 @@ from telegram.ext import (
     CallbackContext,
     ChatMemberHandler,
     MessageHandler,
+    ConversationHandler,
     Filters,
 )
 
@@ -160,10 +161,22 @@ def end_of_joining_command(update: Update, context: CallbackContext):
             i['user'].send_message(a)
             i['role'] = a
             current_roles.remove(a)
+
+        return 0
     else:
         update.effective_chat.send_message('Недостаточно игроков или превышает допустимое значение')
 
+        return ConversationHandler.END
 
+
+def who_kill_command(update: Update, context: CallbackContext):
+    update.effective_chat.send_message('Hello')
+
+    return 0
+
+
+def end_game_command(update: Update, context: CallbackContext):
+    return ConversationHandler.END
 
 
 def main():
@@ -173,10 +186,17 @@ def main():
     dispatcher = updater.dispatcher
     dispatcher.add_handler(ChatMemberHandler(track_chats, ChatMemberHandler.MY_CHAT_MEMBER))
     dispatcher.add_handler(CommandHandler('start', start_command))
-    dispatcher.add_handler(CommandHandler('end_join', end_of_joining_command))
     dispatcher.add_handler(MessageHandler(filters=Filters.regex('играю'), callback=new_game_member_command))
-    dispatcher.add_handler(MessageHandler(filters=Filters.text, callback=ban_word_command))
     dispatcher.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
+    dispatcher.add_handler(ConversationHandler(
+        entry_points=[CommandHandler('end_join', end_of_joining_command)],
+        states={
+            0: [MessageHandler(Filters.text, who_kill_command)]
+        },
+        fallbacks=[CommandHandler('end_game', end_game_command)]
+
+    ))
+    dispatcher.add_handler(MessageHandler(filters=Filters.text, callback=ban_word_command))
     updater.start_polling(allowed_updates=Update.ALL_TYPES)
     updater.idle()
 
